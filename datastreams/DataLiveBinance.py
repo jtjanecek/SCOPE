@@ -14,14 +14,21 @@ sys.path.append("../")
 from helpers.Threader import Threader
 from helpers.DateHelper import TimestampToDate
 
+'''
+Datastream for getting real time crypto Datapoints from Binance
+'''
+
 class DataLiveBinance(Threader):
 	def __init__(self, config):
+		# Set versino to 'Live' so that AlgoTrader knows to restart stream if there are errors
 		self.version = 'Live'
 		self._config = config
 		self._data = []
 		self.start()
 
 	def start(self):
+		''' Start the thread to read datapoints
+		'''
 		self._thread = threading.Thread(target=self._run, daemon=True)
 		self._data_lock = threading.Lock()
 		self._thread.start()
@@ -30,9 +37,12 @@ class DataLiveBinance(Threader):
 		pass
 
 	def join(self):
-		return
+		pass
 
 	def pop(self):
+		''' Method called from AlgoTrader. Get the thread lock and return the most
+		recent datapoint
+		'''
 		with self._data_lock:
 			try:
 				dataToReturn = self._data.pop()	
@@ -65,7 +75,6 @@ class DataLiveBinance(Threader):
 		bm.start()
 
 if __name__ == "__main__":
-	#websocket.enableTrace(True)
 	datastream = DataBinance()
 	for i in range(150):
 		time.sleep(1)
@@ -74,21 +83,3 @@ if __name__ == "__main__":
 	print("Ending!")
 	datastream.join()
 	print("Done!")
-'''
-from keys import BINANCE_API_KEY, BINANCE_SECRET_KEY
-from binance.client import Client
-client = Client(BINANCE_API_KEY, BINANCE_SECRET_KEY)
-from binance.websockets import BinanceSocketManager
-bm = BinanceSocketManager(client)
-def process_message(msg):
-	if msg['e'] == 'error':
-		print("Error: {}".format(msg))
-	else:
-		print("RECV:",msg)
-# start any sockets here, i.e a trade socket
-conn_key = bm.start_aggtrade_socket('BTCUSDT',process_message)
-#conn_key = bm.start_aggtrade_socket('BNBBTC',process_message)
-# then start the socket manager
-bm.start()
-'''
-

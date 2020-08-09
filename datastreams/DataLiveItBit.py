@@ -1,5 +1,3 @@
-# Be sure to pip install websocket-clientAAQ
-# Details: https://pypi.org/project/websocket-client/
 import os
 import logging
 from datetime import datetime
@@ -12,12 +10,19 @@ sys.path.append("../")
 from helpers.Threader import Threader
 import urllib.request
 
+
+'''
+Get the datastream for PAXOS ItBit Cryptocurrency
+'''
+
 class DataLiveItBit(Threader):
 	def __init__(self, config):
+		# Set version to Live so that AlgoTrader knows how to handle this datastream
 		self.version = 'Live'
 		self._data = []
 		self._previous_price = None
 
+		# Start the Daemon
 		self._thread = threading.Thread(target=self._run, daemon=True)
 		self._data_lock = threading.Lock()
 		self._thread.start()
@@ -26,7 +31,7 @@ class DataLiveItBit(Threader):
 		pass
 
 	def join(self):
-		return
+		pass
 
 	def pop(self):
 		with self._data_lock:

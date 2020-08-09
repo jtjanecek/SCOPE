@@ -3,6 +3,10 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+'''
+Sends email using Gmail SMTP
+'''
+
 class Emailer():
 	def __init__(self, sender_address, sender_pass, receiver_address):
 		#The mail addresses and password

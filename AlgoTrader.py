@@ -112,6 +112,7 @@ class AlgoTrader():
 		logging.info("Frame: {}".format(frame))
 		logging.info("End signal detected...")
 		logging.info("Joining datastream...")
+		self.model.join()
 		self.datastream.join()
 		logging.info('Done!')
 		sys.exit(0)

@@ -29,8 +29,8 @@ class DataLocal(Threader):
 				line = line.strip()
 				if 'price_recv' in line:
 					continue
-				price_recv = line.split(',')[0]
-				dt = line.split(",")[1]
+				price_recv = float(line.split(',')[0])
+				dt = float(line.split(",")[1])
 				self._data.insert(0, [{'price_recv': price_recv, 'dt': dt}, 'OK'])
 
 	def start(self):

@@ -1,5 +1,3 @@
-# Be sure to pip install websocket-clientAAQ
-# Details: https://pypi.org/project/websocket-client/
 import os
 os.environ['TZ'] = 'America/New_York'
 from datetime import datetime

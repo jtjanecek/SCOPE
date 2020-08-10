@@ -43,6 +43,11 @@ class AlgoTrader():
 		self.datastream = eval("{}.{}(self._config)".format(self._config['datastream'], self._config['datastream']))
 		logging.info("Datastream started.")
 
+		# Setup model
+		logging.info("Initializing model...")
+		self.model = eval("{}.{}(self._config)".format(self._config['model'], self._config['model']))
+		logging.info("Model initialized.")
+
 		# Start main loop
 		try:
 			self.main_routine()
@@ -65,19 +70,26 @@ class AlgoTrader():
 		while True:
 			dp, status = self.datastream.pop()
 			### Update the model with the datapoint
+
+			# Local datastream has been completed
+			if self.datastream.version == 'Local' and status == 'No datapoint':
+				logging.info("Datastream completed")
+				self._signal_handler(2, None)
+
 			# If there is a datapoint	
 			if dp:
 				# If it has been longer than 10 seconds from the timepoint, ignore it
 				if self.datastream.version == 'Live' and datetime.now() - TimestampToDate(dp['dt']) > timedelta(seconds=10):
 					logging.info("Ignoring {}.. received too late".format(dp))
 					continue
+
 				# Update the model
 				logging.info("Got {}".format(dp))
-				#model.update(dp)
+				self.model.update(dp)
 				last_price_dt_recv = datetime.now()
 			elif datetime.now() - last_price_dt_recv > timedelta(minutes=75):
 				logging.info("No datapoint received for 75 minutes. Exiting")
-				signal_handler("No datapoint received in 75 minutes", None)
+				self._signal_handler("No datapoint received in 75 minutes", None)
 			time.sleep(.1)
 
 	def _setup_log(self, log, cli):

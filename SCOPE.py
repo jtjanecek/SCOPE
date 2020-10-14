@@ -13,7 +13,7 @@ from datastreams import *
 from models import *
 
 
-class AlgoTrader():
+class SCOPE():
 	def __init__(self, cli_args):
 		# Setup signal handler
 		signal.signal(signal.SIGINT, self._signal_handler)
@@ -134,4 +134,4 @@ cli_args = parser.parse_args()
 ############ Start Trader ###############
 #########################################
 
-AlgoTrader(cli_args)
+SCOPE(cli_args)

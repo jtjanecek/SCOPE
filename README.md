@@ -1,5 +1,7 @@
 
-# **S**tock and **C**ryptocurrency **O**pen **P**robabilistic **E**ngine
+# SCOPE
+**S**tock and **C**ryptocurrency **O**pen **P**robabilistic **E**ngine
+
 Backtesting and live trading platform for trading Crypto and Stocks using APIs.
 Deep learning and Bayesian predictive models.
 

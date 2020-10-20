@@ -1,5 +1,5 @@
 import json
-import urllib3
+import requests
 import sys
 sys.path.append("..")
 from keys import *
@@ -10,72 +10,61 @@ logging.basicConfig(level=logging.DEBUG,
         datefmt='%m-%d-%y %H:%M')
 
 
-from HistoricalDB import HistoricalDB
+class CoinApiDownloader():
+	def __init__(self, api_key):
 
-db = HistoricalDB()
+		self._BASE_URL = 'https://rest.coinapi.io/v1/ohlcv/BITSTAMP_SPOT_BTC_USD/history?limit=100000&period_id={}&time_start={}'
 
-def get_current_dt():
-	res = ''
-	with open('current_dt.txt', 'r') as f:
-		res = f.read().strip()
-	return res
+		self._HEADERS = {'X-CoinAPI-Key' : api_key}
 
-def set_current_dt(new_dt):
-	with open('current_dt.txt', 'w+') as f:
-		f.write(str(new_dt))
+	def coinapi_dt_to_unix(self, coinapi_dt: str):
+		dt = coinapi_dt[:-2].replace('T',' ')
+		python_dt = datetime.strptime(dt, '%Y-%m-%d %H:%M:00.000000')
+		return python_dt.timestamp()
 
-def update_db(datapoint):	
-	dt_unix = int(datapoint[0]/1000000000)
-	most_recent_dt = dt_unix
-	open_price = datapoint[1]
-	close_price = datapoint[4]
-	vol = datapoint[5]
-	db.insert(dt_unix, 'XBT', open_price, close_price, vol)
+	def unix_to_coinapi_dt(self, unix_dt):
+		return str(datetime.fromtimestamp(int(unix_dt))).replace(" ","T")
 
-def request_all():
-	num_requests_left = 35
+	def request_data(self, start):
+		'''
+		Params:
+			start: unix epoch time
+		Return:
+			data: list of OHLC timepoints
+		'''
+
+		dt_start = self.unix_to_coinapi_dt(start)
+
+		logging.debug("Requesting from: {}".format(dt_start))
 	
-	logging.info("Requesting all ...")
-	while (num_requests_left != 0):
-		current_dt = get_current_dt()
-		data = request_data(current_dt)
+		url = self._BASE_URL.format("1MIN", dt_start)
+		logging.debug("Requesting: {} ...".format(url))
+
+		response = requests.get(url, headers=self._HEADERS)
 	
-		num_requests_left = int(data['stats']['remainingTimebarQueries'])
-		logging.info("Num requests left: {}".format(num_requests_left))
+		# Too many requests status code
+		if response.status_code == 429:
+			return response.status_code, None
 
-		most_recent_dt = ""
-		for datapoint in data['values']:
-			most_recent_dt = int(datapoint[0]/1000000000)
-			update_db(datapoint)
+		data = response.json()
+		logging.debug("Data length: {}".format(len(data)))
 
-		logging.debug("Final dt this batch: {}".format(datetime.fromtimestamp(int(most_recent_dt))))
-		set_current_dt(most_recent_dt)
-	logging.info("Finished all.")
+		return response.status_code, data
 
-def request_data(start, end='1602654132'):
-	PADDING = "000000000"
 
-	logging.debug("Requesting between:")
-	logging.debug(datetime.fromtimestamp(int(start)))
-	logging.debug(datetime.fromtimestamp(int(end)))
-	
-	start = str(int(start)) + PADDING
-	end   = str(int(end)) + PADDING	
+if __name__ == '__main__':
+	downloader = CoinApiDownloader(COINAPI_API_KEY)
 
-	URL = "https://cryptodatum.io/api/v1/candles/?symbol=bitfinex:btcusd&type={}&step={}&limit={}&start={}&end={}&format=json"
-	URL = URL.format("time", "1m", 500, start, end)
-	logging.debug("Requesting: {} ...".format(URL))
+	from HistoricalDB import HistoricalDB
+	db = HistoricalDB()
+	cur_data = db.get()
 
-	http = urllib3.PoolManager()
-	r = http.request('GET', URL, headers={"Authorization":CRYPTODATUM_API_KEY})
-	data = r.data.decode('utf-8')
-	return json.loads(data)
+	dt_unix = int(cur_data['unix_dt'].values[-1])
 
-request_all()
-'''
-data = request_data(1364774868)
+	status_code, data = downloader.request_data(dt_unix)
 
-print(data['stats'])
-print("Final DT:")
-print(datetime.fromtimestamp(dt_unix))
-'''
+	for datapoint in data:
+		timepoint = downloader.coinapi_dt_to_unix(datapoint['time_period_start'])
+		db.insert(timepoint, 'XBT', datapoint['price_open'], datapoint['price_close'], datapoint['price_high'], datapoint['price_low'], datapoint['volume_traded'])
+		print(datapoint)
+

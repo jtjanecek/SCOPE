@@ -9,6 +9,7 @@ from datetime import timedelta
 import time
 import logging
 import os
+import pandas as pd
 
 
 class HistoricalDB():
@@ -21,17 +22,18 @@ class HistoricalDB():
 		db_file = "file:" + db_file + "?mode=" + mode
 		logging.info("Using DB for orders: {}".format(db_file))
 
-		print(db_file)
 		# This will raise an error if it can't connect
 		self.conn = sqlite3.connect(db_file, uri=True, check_same_thread=False)
 
 		self._cols = ['dt_unix', 'symbol', 'open_price', 'close_price', 'vol']
 
 		sql_create_min_table = """CREATE TABLE IF NOT EXISTS data (
-									dt_unix text PRIMARY KEY,
+									dt_unix real PRIMARY KEY,
 									symbol text NOT NULL,
 									open_price real NOT NULL,
 									close_price real NOT NULL,
+									high_price real NOT NULL,
+									low_price real NOT NULL,
 									vol real NOT NULL);
 								"""
 
@@ -54,8 +56,8 @@ class HistoricalDB():
 
 		c = self.conn.cursor()
 		insert_command = """INSERT INTO data
-							(dt_unix, symbol, open_price, close_price, vol)
-							values(?,?,?,?,?);
+							(dt_unix, symbol, open_price, close_price, high_price, low_price, vol)
+							values(?,?,?,?,?,?,?);
 							"""
 		c.execute(insert_command, args)
 		self.conn.commit()
@@ -83,11 +85,10 @@ class HistoricalDB():
 		# Check if it exists first
 		if not vals:
 			return None
-		print(vals)
-		return vals
 		data = []
 		for val in vals:
-			orders.append({'unix_dt': val[0], 'symbol': val[1], 'open_price': val[2],
-						'close_price': val[3], 'vol': val[4]})
-		return data
+			data.append({'unix_dt': val[0], 'symbol': val[1], 'open_price': val[2],
+						'close_price': val[3], 'high_price': val[4], 'low_price': val[5], 'vol': val[6]})
+		df = pd.DataFrame(data)
+		return df
 

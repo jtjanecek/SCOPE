@@ -8,35 +8,33 @@ from helpers.DateHelper import TimestampToDate
 from helpers.Emailer import Emailer
 import os.path
 import os 
+import json
 
 from datastreams import *
 from models import *
 
 
-class SCOPE():
+class Scope():
 	def __init__(self, cli_args):
-		# Setup signal handler
-		signal.signal(signal.SIGINT, self._signal_handler)
-
 		# Setup config 
-		config = {'cli': cli_args.cli}
-		with open(cli_args.config, 'r') as f:
-			for line in f:
-				split_line = line.strip().split("=")
-				if split_line[1].replace(".",'',1).isnumeric():
-					config[split_line[0]] = float(split_line[1])
-				else:
-					config[split_line[0]] = split_line[1]
-		self._config = config
+		self._config = cli_args
+		with open(self._config['config'], 'r') as f:
+			self._config.update(json.loads(f.read()))
 
 		# Setup the logging
-		self._setup_log(config['id'] + '.log', config['cli'])
+		self._setup_log(self._config['id'] + '.log', self._config['cli'])
+
+		# Setup signal handler
+		signal.signal(signal.SIGINT, self._signal_handler)
+		logging.info("Using config: {config}".format(config=self._config))
 
 		# Log PID
 		logging.info("Using PID: {}".format(os.getpid()))
 
 		# Setup emailer
-		self._emailer = Emailer(config['sender_address'], config['sender_pass'], config['receiver_address']) 
+		self._emailer = None
+		if self._config['email']['enabled']:
+			self._emailer = Emailer(config['sender_address'], config['sender_pass'], config['receiver_address']) 
 
 		# Setup datastream
 		logging.info("Starting datastream...")
@@ -105,7 +103,7 @@ class SCOPE():
 					datefmt='%m-%d-%y %H:%M')
 
 	def _signal_handler(self, sig, frame):
-		if sig != 2:
+		if sig != 2 and self._emailer != None:
 			logging.info("Sending error email...")
 			self._emailer.send("Error: {}".format(sig))
 		logging.info("Sig: {}".format(sig))
@@ -126,12 +124,12 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Run the trading algo')
 parser.add_argument('--config', help='config file for this algo', required=True)
-parser.add_argument('--cli', help='enable CLI', default='disable')
-cli_args = parser.parse_args()
+parser.add_argument('--cli', help='enable CLI', default='enable')
+cli_args = vars(parser.parse_args())
 
 
 #########################################
 ############ Start Trader ###############
 #########################################
 
-SCOPE(cli_args)
+Scope(cli_args)
